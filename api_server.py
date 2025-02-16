@@ -1,11 +1,11 @@
 from flask import Flask, request, jsonify
 import os
 import json
+import time
 from dotenv import load_dotenv
 from flask_cors import CORS
 import requests
 import logging
-import time
 
 load_dotenv()  # Завантаження змінних оточення
 
@@ -63,7 +63,7 @@ def receive_data():
     except Exception as e:
         app.logger.error("Помилка збереження даних у файл: %s", e)
     
-    # Якщо є user_id, формуємо системну команду з JSON-даними
+    # Якщо є user_id, формуємо команду з JSON-даними
     if data.get("user_id"):
         command_text = "/webapp_data " + json.dumps(data)
         send_system_message(data.get("user_id"), command_text)
