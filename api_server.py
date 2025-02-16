@@ -26,7 +26,7 @@ if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
 def send_system_message(user_id, text):
-    """Відправляє системне повідомлення (команду) до бота та видаляє його після затримки."""
+    """Відправляє системне повідомлення (команду) до бота та видаляє його після 2 секунд."""
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": user_id,
@@ -39,7 +39,7 @@ def send_system_message(user_id, text):
         result = r.json()
         if result.get("ok"):
             message_id = result["result"]["message_id"]
-            # Затримка 2 секунди, щоб повідомлення точно прийшло
+            # Затримка 2 секунди, щоб повідомлення точно отрималося
             time.sleep(2)
             delete_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteMessage"
             delete_payload = {"chat_id": user_id, "message_id": message_id}
