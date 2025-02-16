@@ -27,7 +27,8 @@ if not os.path.exists(DATA_FOLDER):
 
 def send_system_message(user_id, text):
     """
-    Відправляє системне повідомлення (команду) до бота та видаляє його через 2 секунди.
+    Відправляє системне повідомлення (команду) до бота.
+    Видалення повідомлення прибране для тестування.
     """
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
@@ -38,16 +39,9 @@ def send_system_message(user_id, text):
     try:
         r = requests.post(url, json=payload)
         app.logger.info("Системне повідомлення відправлено, статус: %s", r.status_code)
-        result = r.json()
-        if result.get("ok"):
-            message_id = result["result"]["message_id"]
-            time.sleep(2)
-            delete_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteMessage"
-            delete_payload = {"chat_id": user_id, "message_id": message_id}
-            dr = requests.post(delete_url, json=delete_payload)
-            app.logger.info("Системне повідомлення видалено, статус: %s", dr.status_code)
+        # Видалення прибране, оскільки повідомлення і так обробляється ботом
     except Exception as e:
-        app.logger.error("Помилка відправлення/видалення системного повідомлення: %s", e)
+        app.logger.error("Помилка відправлення системного повідомлення: %s", e)
 
 @app.route('/endpoint', methods=['POST'])
 def receive_data():
