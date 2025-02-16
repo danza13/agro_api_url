@@ -2,10 +2,12 @@ from flask import Flask, request, jsonify
 import requests
 import os
 from dotenv import load_dotenv
+from flask_cors import CORS  # імпорт flask-cors
 
-load_dotenv()  # Завантажує змінні з .env
+load_dotenv()  # Завантаження змінних з .env
 
 app = Flask(__name__)
+CORS(app)  # Увімкнення CORS для всіх маршрутів
 
 # Отримуємо токен бота для відправки повідомлень (якщо потрібно)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
@@ -43,7 +45,7 @@ def get_data():
         except Exception as e:
             print("Помилка надсилання повідомлення:", e)
 
-    # Повертаємо статус ок
+    # Повертаємо статус "ok"
     return jsonify({"status": "ok"}), 200
 
 if __name__ == "__main__":
