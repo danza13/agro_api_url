@@ -29,19 +29,19 @@ def get_data():
 
     # Для демонстрації: надсилаємо повідомлення користувачеві через Telegram Bot API
     user_id = data.get("user_id")
-    if user_id and TELEGRAM_TOKEN:
-        text_msg = "Дані з WebApp отримано:\n"
-        for key, value in data.items():
-            text_msg += f"{key}: {value}\n"
-        try:
-            resp = requests.post(
-                BOT_SENDMESSAGE_URL,
-                json={"chat_id": user_id, "text": text_msg},
-                timeout=10
-            )
-            print("Відповідь від Telegram:", resp.status_code, resp.text)
-        except Exception as e:
-            print("Помилка надсилання повідомлення:", e)
+#    if user_id and TELEGRAM_TOKEN:
+#        text_msg = "Дані з WebApp отримано:\n"
+#        for key, value in data.items():
+#            text_msg += f"{key}: {value}\n"
+#        try:
+#            resp = requests.post(
+#                BOT_SENDMESSAGE_URL,
+#                json={"chat_id": user_id, "text": text_msg},
+#                timeout=10
+#            )
+#            print("Відповідь від Telegram:", resp.status_code, resp.text)
+#        except Exception as e:
+#            print("Помилка надсилання повідомлення:", e)
 
     # Повертаємо статус ок
     return jsonify({"status": "ok"}), 200
