@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import os
 from dotenv import load_dotenv
-from flask_cors import CORS  # Імпорт Flask-CORS
+from flask_cors import CORS
 
 load_dotenv()  # Завантаження змінних з .env
 
@@ -11,21 +11,21 @@ CORS(app)  # Увімкнення CORS для всіх маршрутів
 @app.route('/endpoint', methods=['POST'])
 def get_data():
     """
-    Цей маршрут приймає дані від WebApp після натискання кнопки "Підтвердити".
-    Очікується, що дані будуть у форматі JSON, наприклад:
+    Приймає дані від WebApp або бота.
+    Формат JSON (наприклад):
       {
          "user_id": 123456789,
-         "culture": "Пшениця",
+         "pib": "Іванов Іван Іванович",
          "region": "Київська",
-         "district": "Білоцерківський",
-         "city": "Біла Церква"
+         "age": "30",
+         "phone": "+380XXXXXXXXX",
+         "initial_app": { ... },
+         "webapp": { ... }
       }
     """
     data = request.json
-    # Логування отриманих даних (системне повідомлення – не надсилаємо користувачу)
-    app.logger.info("Отримано дані від WebApp: %s", data)
-    
-    # Не надсилаємо повідомлення користувачу; лише повертаємо статус
+    app.logger.info("Отримано дані від WebApp/бота: %s", data)
+    # Не надсилаємо повідомлення користувачу – лише повертаємо статус
     return jsonify({"status": "ok"}), 200
 
 if __name__ == "__main__":
