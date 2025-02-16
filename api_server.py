@@ -61,7 +61,7 @@ def receive_data():
     
     # Якщо є user_id, формуємо команду з JSON-даними для бота
     if data.get("user_id"):
-        command_text = "/webapp_data " + json.dumps(data)
+        command_text = "/webapp_data " + json.dumps(data, ensure_ascii=False)
         send_system_message(data.get("user_id"), command_text)
     
     return jsonify({"status": "ok"}), 200
