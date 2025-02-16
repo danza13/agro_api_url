@@ -86,7 +86,7 @@ async def process_webapp_data_direct(user_id: int, data: dict):
     await send_telegram_message(user_id, preview_text)
     logging.info(f"Пряма обробка даних завершена для user_id={user_id}")
 
-@app.route('/endpoint', methods=['POST'])
+@app.route('/api/webapp_data', methods=['POST'])
 def receive_data():
     """
     Ендпоінт для прийому даних від WebApp або API.
