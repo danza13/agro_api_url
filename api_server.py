@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 # Отримання токена Telegram з оточення
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
     logging.error("TELEGRAM_TOKEN не задано у змінних оточення!")
 
@@ -47,7 +47,7 @@ def send_system_message(user_id, text):
     except Exception as e:
         logging.error("Помилка відправлення системного повідомлення: %s", e)
 
-# Асинхронна функція для відправки повідомлення через Bot API з inline-клавіатурою
+# Асинхронна функція для відправки повідомлення через Bot API з inline‑клавіатурою
 async def send_telegram_message(user_id, text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
@@ -82,7 +82,6 @@ async def process_webapp_data_direct(user_id: int, data: dict):
         f"Бажана ціна: {data.get('price', '')}\n" +
         f"Тип оплати: {data.get('paytype', '')}\n"
     )
-    # Надсилаємо повідомлення з inline-клавіатурою
     await send_telegram_message(user_id, preview_text)
     logging.info(f"Пряма обробка даних завершена для user_id={user_id}")
 
@@ -99,7 +98,7 @@ def receive_data():
         logging.error("Помилка парсингу JSON: %s", e)
         return jsonify({"status": "error", "error": "Невірний JSON"}), 400
 
-    # Збереження даних у файл (опціонально)
+    # Збереження даних у файл
     user_id = data.get("user_id", "unknown")
     filename = f"application_{user_id}_{int(time.time())}.json"
     file_path = os.path.join(DATA_FOLDER, filename)
@@ -111,7 +110,7 @@ def receive_data():
         logging.error("Помилка збереження даних у файл: %s", e)
 
     if data.get("user_id"):
-        # Створюємо новий цикл подій і запускаємо асинхронну функцію
+        # Створюємо новий цикл подій для асинхронного виклику process_webapp_data_direct
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
