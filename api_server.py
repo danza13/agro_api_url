@@ -3,11 +3,12 @@ import os
 import json
 import time
 import logging
+import requests
 from dotenv import load_dotenv
 from flask_cors import CORS
-import requests
 
-load_dotenv()  # Завантаження змінних оточення
+# Завантаження змінних оточення
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -18,9 +19,12 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# Отримання токена Telegram з оточення
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+if not TELEGRAM_TOKEN:
+    logging.error("TELEGRAM_TOKEN не задано у змінних оточення!")
 
-# Опціонально: зберігання даних у файл
+# Папка для збереження файлів (опціонально)
 DATA_FOLDER = "applications"
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
@@ -39,16 +43,23 @@ def send_system_message(user_id, text):
     try:
         r = requests.post(url, json=payload)
         app.logger.info("Системне повідомлення відправлено, статус: %s", r.status_code)
-        # Видалення прибране, оскільки повідомлення і так обробляється ботом
     except Exception as e:
         app.logger.error("Помилка відправлення системного повідомлення: %s", e)
 
 @app.route('/endpoint', methods=['POST'])
 def receive_data():
-    data = request.get_json()
-    app.logger.info("Отримано дані: %s", data)
-    
-    # Зберігаємо дані у файл (опціонально)
+    """
+    Ендпоінт для прийому даних від WebApp або API.
+    Дані зберігаються у файл і формується команда для бота.
+    """
+    try:
+        data = request.get_json()
+        app.logger.info("Отримано дані: %s", data)
+    except Exception as e:
+        app.logger.error("Помилка парсингу JSON: %s", e)
+        return jsonify({"status": "error", "error": "Невірний JSON"}), 400
+
+    # Збереження даних у файл (опціонально)
     user_id = data.get("user_id", "unknown")
     filename = f"application_{user_id}_{int(time.time())}.json"
     file_path = os.path.join(DATA_FOLDER, filename)
@@ -58,14 +69,17 @@ def receive_data():
         app.logger.info("Дані збережено у файл: %s", filename)
     except Exception as e:
         app.logger.error("Помилка збереження даних у файл: %s", e)
-    
-    # Якщо є user_id, формуємо команду з JSON-даними для бота
+
+    # Якщо в даних є user_id, формуємо команду для бота
     if data.get("user_id"):
         command_text = "/webapp_data " + json.dumps(data, ensure_ascii=False)
         send_system_message(data.get("user_id"), command_text)
-    
+    else:
+        app.logger.error("user_id відсутній у отриманих даних")
+
     return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
+    # Використовуємо PORT із оточення (на Render ця змінна задається автоматично)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
