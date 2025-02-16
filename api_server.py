@@ -2,10 +2,10 @@ from flask import Flask, request, jsonify
 import os
 import json
 import time
+import logging
 from dotenv import load_dotenv
 from flask_cors import CORS
 import requests
-import logging
 
 load_dotenv()  # Завантаження змінних оточення
 
@@ -26,7 +26,9 @@ if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
 def send_system_message(user_id, text):
-    """Відправляє системне повідомлення (команду) до бота та видаляє його через 2 секунди."""
+    """
+    Відправляє системне повідомлення (команду) до бота та видаляє його через 2 секунди.
+    """
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": user_id,
@@ -52,7 +54,7 @@ def receive_data():
     data = request.get_json()
     app.logger.info("Отримано дані: %s", data)
     
-    # Опціонально: зберігаємо дані у файл
+    # Зберігаємо дані у файл (опціонально)
     user_id = data.get("user_id", "unknown")
     filename = f"application_{user_id}_{int(time.time())}.json"
     file_path = os.path.join(DATA_FOLDER, filename)
@@ -63,7 +65,7 @@ def receive_data():
     except Exception as e:
         app.logger.error("Помилка збереження даних у файл: %s", e)
     
-    # Якщо є user_id, формуємо команду з JSON-даними
+    # Якщо є user_id, формуємо команду з JSON-даними для бота
     if data.get("user_id"):
         command_text = "/webapp_data " + json.dumps(data)
         send_system_message(data.get("user_id"), command_text)
