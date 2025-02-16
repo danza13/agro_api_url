@@ -42,9 +42,9 @@ def send_system_message(user_id, text):
     }
     try:
         r = requests.post(url, json=payload)
-        app.logger.info("Системне повідомлення відправлено, статус: %s", r.status_code)
+        logging.info("Системне повідомлення відправлено, статус: %s", r.status_code)
     except Exception as e:
-        app.logger.error("Помилка відправлення системного повідомлення: %s", e)
+        logging.error("Помилка відправлення системного повідомлення: %s", e)
 
 @app.route('/endpoint', methods=['POST'])
 def receive_data():
@@ -54,9 +54,9 @@ def receive_data():
     """
     try:
         data = request.get_json()
-        app.logger.info("Отримано дані: %s", data)
+        logging.info("Отримано дані: %s", data)
     except Exception as e:
-        app.logger.error("Помилка парсингу JSON: %s", e)
+        logging.error("Помилка парсингу JSON: %s", e)
         return jsonify({"status": "error", "error": "Невірний JSON"}), 400
 
     # Збереження даних у файл (опціонально)
@@ -66,20 +66,20 @@ def receive_data():
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        app.logger.info("Дані збережено у файл: %s", filename)
+        logging.info("Дані збережено у файл: %s", filename)
     except Exception as e:
-        app.logger.error("Помилка збереження даних у файл: %s", e)
+        logging.error("Помилка збереження даних у файл: %s", e)
 
     # Якщо в даних є user_id, формуємо команду для бота
     if data.get("user_id"):
         command_text = "/webapp_data " + json.dumps(data, ensure_ascii=False)
         send_system_message(data.get("user_id"), command_text)
     else:
-        app.logger.error("user_id відсутній у отриманих даних")
+        logging.error("user_id відсутній у отриманих даних")
 
     return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
-    # Використовуємо PORT із оточення (на Render ця змінна задається автоматично)
+    # Використовуємо PORT із оточення (Render задає його автоматично; за замовчуванням 5000)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
