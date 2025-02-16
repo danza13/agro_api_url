@@ -47,9 +47,28 @@ def send_system_message(user_id, text):
     except Exception as e:
         logging.error("Помилка відправлення системного повідомлення: %s", e)
 
-# Асинхронна функція для обробки даних
+# Асинхронна функція для відправки повідомлення через Bot API з inline-клавіатурою
+async def send_telegram_message(user_id, text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": user_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "reply_markup": {
+            "inline_keyboard": [
+                [{"text": "Редагувати", "callback_data": "edit_app"}],
+                [{"text": "Підтвердити", "callback_data": "confirm_app"}]
+            ]
+        }
+    }
+    import aiohttp
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload) as resp:
+            response_text = await resp.text()
+            logging.info("Відправлено повідомлення користувачу %s, статус: %s, відповідь: %s", user_id, resp.status, response_text)
+
+# Асинхронна функція для прямої обробки даних від API
 async def process_webapp_data_direct(user_id: int, data: dict):
-    # Формуємо текст повідомлення з даними заявки
     preview_text = (
         "<b>Перевірте заявку:</b>\n\n" +
         f"ФГ: {data.get('fgh_name', '')}\n" +
@@ -63,25 +82,9 @@ async def process_webapp_data_direct(user_id: int, data: dict):
         f"Бажана ціна: {data.get('price', '')}\n" +
         f"Тип оплати: {data.get('paytype', '')}\n"
     )
-    # Надсилаємо повідомлення через Bot API
-    # (Зверніть увагу: цей виклик асинхронний і вимагає запущеного циклу подій)
+    # Надсилаємо повідомлення з inline-клавіатурою
     await send_telegram_message(user_id, preview_text)
     logging.info(f"Пряма обробка даних завершена для user_id={user_id}")
-
-# Допоміжна асинхронна функція для відправки повідомлення через Bot API
-async def send_telegram_message(user_id, text):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": user_id,
-        "text": text,
-        "parse_mode": "HTML"
-    }
-    # Виконуємо асинхронний запит за допомогою aiohttp
-    import aiohttp
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload) as resp:
-            response_text = await resp.text()
-            logging.info("Відправлено повідомлення користувачу %s, статус: %s, відповідь: %s", user_id, resp.status, response_text)
 
 @app.route('/endpoint', methods=['POST'])
 def receive_data():
@@ -108,11 +111,15 @@ def receive_data():
         logging.error("Помилка збереження даних у файл: %s", e)
 
     if data.get("user_id"):
-        # Викликаємо асинхронну функцію process_webapp_data_direct синхронно
+        # Створюємо новий цикл подій і запускаємо асинхронну функцію
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            asyncio.run(process_webapp_data_direct(data.get("user_id"), data))
+            loop.run_until_complete(process_webapp_data_direct(data.get("user_id"), data))
         except Exception as ex:
             logging.error("Помилка при виконанні process_webapp_data_direct: %s", ex)
+        finally:
+            loop.close()
     else:
         logging.error("user_id відсутній у отриманих даних")
 
