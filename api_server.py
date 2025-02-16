@@ -20,16 +20,21 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# Отримання токена Telegram з оточення
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
     logging.error("TELEGRAM_TOKEN не задано у змінних оточення!")
 
+# Папка для збереження файлів (опціонально)
 DATA_FOLDER = "applications"
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
-# Цю функцію залишаємо, якщо потрібно відправляти повідомлення (але ми її більше не використовуємо)
 def send_system_message(user_id, text):
+    """
+    Відправляє системне повідомлення (команду) до бота.
+    Видалення повідомлення прибране для тестування.
+    """
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": user_id,
@@ -42,13 +47,9 @@ def send_system_message(user_id, text):
     except Exception as e:
         logging.error("Помилка відправлення системного повідомлення: %s", e)
 
-# Функція для прямої обробки даних від API. 
-# Вона має бути викликана асинхронно.
-async def process_webapp_data_direct(user_id, data):
-    # Тут ми симулюємо створення прев'ю заявки та відправлення повідомлення через бота.
-    # Якщо бот і API працюють в одному процесі, то можна отримати доступ до функцій бота.
-    # Наприклад, використовуючи метод send_message із aiogram.
-    from your_bot_module import bot  # Припустимо, що ваш бот імпортується з іншого модуля
+# Асинхронна функція для обробки даних
+async def process_webapp_data_direct(user_id: int, data: dict):
+    # Формуємо текст повідомлення з даними заявки
     preview_text = (
         "<b>Перевірте заявку:</b>\n\n" +
         f"ФГ: {data.get('fgh_name', '')}\n" +
@@ -62,15 +63,31 @@ async def process_webapp_data_direct(user_id, data):
         f"Бажана ціна: {data.get('price', '')}\n" +
         f"Тип оплати: {data.get('paytype', '')}\n"
     )
-    # Надсилаємо повідомлення користувачу через бота
-    await bot.send_message(user_id, preview_text)
+    # Надсилаємо повідомлення через Bot API
+    # (Зверніть увагу: цей виклик асинхронний і вимагає запущеного циклу подій)
+    await send_telegram_message(user_id, preview_text)
     logging.info(f"Пряма обробка даних завершена для user_id={user_id}")
+
+# Допоміжна асинхронна функція для відправки повідомлення через Bot API
+async def send_telegram_message(user_id, text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": user_id,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    # Виконуємо асинхронний запит за допомогою aiohttp
+    import aiohttp
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload) as resp:
+            response_text = await resp.text()
+            logging.info("Відправлено повідомлення користувачу %s, статус: %s, відповідь: %s", user_id, resp.status, response_text)
 
 @app.route('/endpoint', methods=['POST'])
 def receive_data():
     """
     Ендпоінт для прийому даних від WebApp або API.
-    Дані зберігаються у файл і безпосередньо обробляються через process_webapp_data_direct.
+    Дані зберігаються у файл і обробляються напряму.
     """
     try:
         data = request.get_json()
@@ -91,9 +108,11 @@ def receive_data():
         logging.error("Помилка збереження даних у файл: %s", e)
 
     if data.get("user_id"):
-        # Виклик асинхронної функції process_webapp_data_direct
-        # Якщо API та бот працюють в одному процесі, ми можемо використати asyncio.create_task або run_coroutine_threadsafe.
-        asyncio.create_task(process_webapp_data_direct(data.get("user_id"), data))
+        # Викликаємо асинхронну функцію process_webapp_data_direct синхронно
+        try:
+            asyncio.run(process_webapp_data_direct(data.get("user_id"), data))
+        except Exception as ex:
+            logging.error("Помилка при виконанні process_webapp_data_direct: %s", ex)
     else:
         logging.error("user_id відсутній у отриманих даних")
 
