@@ -8,6 +8,7 @@ from aiohttp import web
 from dotenv import load_dotenv
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import aiohttp_cors  # імпортуємо бібліотеку для CORS
 
 load_dotenv()
 
@@ -73,7 +74,21 @@ async def handle_webapp_data(request: web.Request):
 
 async def init_app():
     app = web.Application()
-    app.add_routes([web.post('/api/webapp_data', handle_webapp_data)])
+    app.router.add_post('/api/webapp_data', handle_webapp_data)
+    
+    # Налаштовуємо CORS за допомогою aiohttp_cors
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            allow_methods=["GET", "POST", "OPTIONS"]
+        )
+    })
+    # Додаємо всі маршрути до CORS
+    for route in list(app.router.routes()):
+        cors.add(route)
+    
     return app
 
 if __name__ == '__main__':
