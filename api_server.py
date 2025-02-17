@@ -30,7 +30,7 @@ def init_gspread():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    # Зчитуємо JSON вміст сервісного акаунта з environment
+    # Читаємо вміст сервісного акаунта з environment
     service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
     if not service_account_json:
         raise Exception("SERVICE_ACCOUNT_JSON environment variable is not set")
@@ -54,24 +54,9 @@ async def handle_webapp_data(request: web.Request):
             return web.json_response({"status": "error", "error": "user_id missing"})
         if not data or not any(data.values()):
             return web.json_response({"status": "error", "error": "empty data"})
-        ws1, _ = get_worksheets()
-        new_row = [
-            str(user_id),
-            data.get("fgh_name", ""),
-            data.get("edrpou", ""),
-            data.get("quantity", ""),
-            data.get("comment", ""),
-            data.get("culture", ""),
-            data.get("region", ""),
-            data.get("district", ""),
-            data.get("city", ""),
-            "",  # менеджерська ціна
-            "",  # статус повідомлення
-            data.get("price", ""),
-            data.get("paytype", "")
-        ]
-        ws1.append_row(new_row)
-        return web.json_response({"status": "ok"})
+        # Не записуємо дані одразу в таблицю – повертаємо лише статус "preview"
+        logging.info(f"API отримав дані для user_id={user_id}, повертаємо preview.")
+        return web.json_response({"status": "preview"})
     except Exception as e:
         logging.exception(f"API: Помилка: {e}")
         return web.json_response({"status": "error", "error": str(e)})
@@ -80,7 +65,7 @@ async def init_app():
     app = web.Application()
     app.router.add_post('/api/webapp_data', handle_webapp_data)
     
-    # Налаштовуємо CORS за допомогою aiohttp_cors
+    # Налаштовуємо CORS
     cors = aiohttp_cors.setup(app, defaults={
         "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
