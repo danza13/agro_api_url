@@ -1,5 +1,2 @@
-Flask
-requests
-python-dotenv
-flask-cors
-aiohttp
+Flask==2.2.2
+python-telegram-bot==13.15
