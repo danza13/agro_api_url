@@ -3,7 +3,7 @@ import requests
 import json
 import os
 
-# Вкажіть правильну адресу API, як її бачить Render (наприклад, https://agro-api-url.onrender.com/api/webapp_data)
+# API_URL – переконайтеся, що вона співпадає з URL, який використовується у WebApp.
 API_URL = os.getenv("API_URL", "https://agro-api-url.onrender.com/api/webapp_data")
 
 payload = {
