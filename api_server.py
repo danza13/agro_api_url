@@ -8,7 +8,7 @@ from aiohttp import web
 from dotenv import load_dotenv
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import aiohttp_cors  # імпортуємо бібліотеку для CORS
+import aiohttp_cors
 
 load_dotenv()
 
@@ -30,10 +30,14 @@ def init_gspread():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
-    client = gspread.authorize(creds)
+    # Зчитуємо JSON вміст сервісного акаунта з environment
+    service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
+    if not service_account_json:
+        raise Exception("SERVICE_ACCOUNT_JSON environment variable is not set")
+    creds_info = json.loads(service_account_json)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scope)
     logging.debug("gspread ініціалізовано.")
-    return client
+    return gspread.authorize(creds)
 
 def get_worksheets():
     client = init_gspread()
@@ -85,7 +89,6 @@ async def init_app():
             allow_methods=["GET", "POST", "OPTIONS"]
         )
     })
-    # Додаємо всі маршрути до CORS
     for route in list(app.router.routes()):
         cors.add(route)
     
