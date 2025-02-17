@@ -3,10 +3,9 @@ import requests
 import json
 import os
 
-# Вкажіть URL API (переконайтеся, що порт співпадає з API_PORT, встановленим у bot.py)
-API_URL = os.getenv("API_URL", "http://localhost:8080/api/webapp_data")
+# Вкажіть правильну адресу API, як її бачить Render (наприклад, https://agro-api-url.onrender.com/api/webapp_data)
+API_URL = os.getenv("API_URL", "https://agro-api-url.onrender.com/api/webapp_data")
 
-# Тестові дані
 payload = {
     "user_id": 1124775269,
     "fgh_name": "Тест ФГ",
