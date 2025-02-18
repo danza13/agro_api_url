@@ -54,9 +54,43 @@ async def handle_webapp_data(request: web.Request):
             return web.json_response({"status": "error", "error": "user_id missing"})
         if not data or not any(data.values()):
             return web.json_response({"status": "error", "error": "empty data"})
-        # Не записуємо дані одразу в таблицю – повертаємо лише статус "preview"
-        logging.info(f"API отримав дані для user_id={user_id}, повертаємо preview.")
-        return web.json_response({"status": "preview"})
+        
+        logging.info(f"API отримав дані для user_id={user_id}: {json.dumps(data, ensure_ascii=False)}")
+        # Для запису у Google Sheets використовуємо ту ж конфігурацію, що й у bot.py
+        from config import CONFIG
+        def get_next_free_row(ws, start_col_letter, row_start):
+            sheet_row = row_start
+            end_col_letter = CONFIG.get("payment_form_column")
+            while True:
+                cell_range = ws.range(f"{start_col_letter}{sheet_row}:{end_col_letter}{sheet_row}")
+                if all((cell.value is None or cell.value.strip() == "") for cell in cell_range):
+                    break
+                sheet_row += 1
+            return sheet_row
+        
+        ws1, _ = get_worksheets()
+        fields_order = [
+            "fgh_name", "edrpou", "region", "district", "city",
+            "group", "culture", "quantity", "price", "currency", "payment_form"
+        ]
+        row_start = int(CONFIG.get("row_start", 13))
+        sheet_row = get_next_free_row(ws1, CONFIG["fgh_name_column"], row_start)
+        for field in fields_order:
+            key = f"{field}_column"
+            col_letter = CONFIG.get(key)
+            if not col_letter:
+                continue
+            from gspread.utils import a1_to_rowcol
+            _, col_number = a1_to_rowcol(f"{col_letter}1")
+            value = data.get(field, "")
+            ws1.update_cell(sheet_row, col_number, value)
+        extra_fields_col = CONFIG.get("extra_fields_column")
+        if extra_fields_col:
+            _, col_number = a1_to_rowcol(f"{extra_fields_col}1")
+            extra_fields = data.get("extra_fields", {})
+            ws1.update_cell(sheet_row, col_number, json.dumps(extra_fields, ensure_ascii=False))
+        
+        return web.json_response({"status": "ok"})
     except Exception as e:
         logging.exception(f"API: Помилка: {e}")
         return web.json_response({"status": "error", "error": str(e)})
