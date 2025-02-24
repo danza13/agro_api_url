@@ -9,10 +9,6 @@ from dotenv import load_dotenv
 import aiohttp
 import aiohttp_cors
 
-# Імпорт FSM та станів із бота
-from aiogram.dispatcher import FSMContext
-from your_bot_module import dp, ApplicationStates  # Замість your_bot_module використайте ім'я модуля, де знаходиться ваш dp та ApplicationStates
-
 load_dotenv()
 
 logging.basicConfig(
@@ -145,11 +141,7 @@ async def handle_webapp_data(request: web.Request):
         
         logging.info(f"API отримав дані для user_id={user_id}: {json.dumps(data, ensure_ascii=False)}")
         
-        # Оновлюємо стан користувача для FSM (якщо бот використовує MemoryStorage)
-        state = dp.current_state(chat=user_id, user=user_id)
-        await state.update_data(webapp_data=data)
-        await state.set_state(ApplicationStates.confirm_application.state)
-        
+        # Надсилаємо повідомлення з preview заявки (reply keyboard) користувачу.
         notify_result = await notify_user(user_id, data)
         logging.info(f"Сповіщення боту: {notify_result}")
         
