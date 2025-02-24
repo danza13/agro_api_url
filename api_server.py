@@ -9,6 +9,10 @@ from dotenv import load_dotenv
 import aiohttp
 import aiohttp_cors
 
+# Імпорт FSM та станів із бота
+from aiogram.dispatcher import FSMContext
+from your_bot_module import dp, ApplicationStates  # Замість your_bot_module використайте ім'я модуля, де знаходиться ваш dp та ApplicationStates
+
 load_dotenv()
 
 logging.basicConfig(
@@ -93,7 +97,6 @@ def format_preview(data: dict) -> str:
     if extra:
         lines.append("Додаткові параметри:")
         for key, value in extra.items():
-            # Якщо ключ є у словнику перекладів, використовуємо переклад; інакше - ключ з першою великою літерою
             translated = translation_dict.get(key, key.capitalize())
             lines.append(f"{translated}: {value}")
     lines.append(f"Кількість: {data.get('quantity', '')} т")
@@ -105,7 +108,7 @@ def format_preview(data: dict) -> str:
 async def notify_user(user_id, data: dict):
     """
     Надсилає повідомлення через Telegram Bot API з відформатованим текстом заявки 
-    та клавіатурою з кнопками "Підтвердити", "Редагувати", "Скасувати".
+    та reply keyboard з кнопками "Підтвердити", "Редагувати", "Скасувати".
     """
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     message_text = format_preview(data)
@@ -141,6 +144,11 @@ async def handle_webapp_data(request: web.Request):
             return web.json_response({"status": "error", "error": "empty data"})
         
         logging.info(f"API отримав дані для user_id={user_id}: {json.dumps(data, ensure_ascii=False)}")
+        
+        # Оновлюємо стан користувача для FSM (якщо бот використовує MemoryStorage)
+        state = dp.current_state(chat=user_id, user=user_id)
+        await state.update_data(webapp_data=data)
+        await state.set_state(ApplicationStates.confirm_application.state)
         
         notify_result = await notify_user(user_id, data)
         logging.info(f"Сповіщення боту: {notify_result}")
