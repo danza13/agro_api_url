@@ -6,6 +6,7 @@ import asyncio
 
 from aiohttp import web
 from dotenv import load_dotenv
+import aiohttp
 import aiohttp_cors
 
 load_dotenv()
@@ -16,7 +17,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Завантаження конфігурації Google Sheets (опційно, якщо потрібно для інших частин)
+# Завантаження конфігурації (якщо потрібна)
 try:
     from config import CONFIG
 except ImportError:
@@ -42,7 +43,22 @@ CONFIG = {
     from config import CONFIG
 
 API_PORT = int(os.getenv("API_PORT", "8080"))
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 
+# Функція для надсилання повідомлення користувачу через Telegram Bot API
+async def notify_user(user_id, data):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    message_text = f"Отримано заявку:\n{data}"
+    payload = {
+        "chat_id": user_id,
+        "text": message_text
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload) as resp:
+            result = await resp.json()
+            return result
+
+# Основна функція-обробник запиту з WebApp
 async def handle_webapp_data(request: web.Request):
     try:
         data = await request.json()
@@ -53,12 +69,18 @@ async def handle_webapp_data(request: web.Request):
             return web.json_response({"status": "error", "error": "empty data"})
         
         logging.info(f"API отримав дані для user_id={user_id}: {json.dumps(data, ensure_ascii=False)}")
-        # Просто повертаємо статус preview
+        
+        # Надсилання сповіщення через Telegram Bot API
+        notify_result = await notify_user(user_id, json.dumps(data, ensure_ascii=False))
+        logging.info(f"Сповіщення боту: {notify_result}")
+        
+        # Повертаємо статус preview
         return web.json_response({"status": "preview"})
     except Exception as e:
         logging.exception(f"API: Помилка: {e}")
         return web.json_response({"status": "error", "error": str(e)})
 
+# Ініціалізація додатку та налаштування CORS
 async def init_app():
     app = web.Application()
     app.router.add_post('/api/webapp_data', handle_webapp_data)
