@@ -139,13 +139,19 @@ async def handle_webapp_data(request: web.Request):
         if not data or not any(data.values()):
             return web.json_response({"status": "error", "error": "empty data"})
         
-        logging.info(f"API отримав дані для user_id={user_id}: {json.dumps(data, ensure_ascii=False)}")
+        # Отримуємо значення поля "action" (за замовчуванням "confirm")
+        action = data.get("action", "confirm")
+        logging.info(f"API отримав дані для user_id={user_id} з дією '{action}': {json.dumps(data, ensure_ascii=False)}")
         
-        # Надсилаємо повідомлення з preview заявки (reply keyboard) користувачу.
-        notify_result = await notify_user(user_id, data)
-        logging.info(f"Сповіщення боту: {notify_result}")
-        
-        return web.json_response({"status": "preview"})
+        if action == "confirm":
+            # Якщо дія підтвердження – надсилаємо повідомлення з попереднім переглядом заявки
+            notify_result = await notify_user(user_id, data)
+            logging.info(f"Сповіщення боту: {notify_result}")
+            return web.json_response({"status": "preview"})
+        else:
+            # Обробка інших можливих дій (наприклад, редагування)
+            logging.info(f"Отримано дію '{action}', яка наразі не обробляється.")
+            return web.json_response({"status": "ignored", "action": action})
     except Exception as e:
         logging.exception(f"API: Помилка: {e}")
         return web.json_response({"status": "error", "error": str(e)})
