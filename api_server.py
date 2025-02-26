@@ -6,7 +6,6 @@ import asyncio
 
 from aiohttp import web
 from dotenv import load_dotenv
-import aiohttp
 import aiohttp_cors
 
 load_dotenv()
@@ -17,7 +16,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Завантаження конфігурації (якщо потрібна)
+# Завантаження конфігурації Google Sheets (опційно, якщо потрібно для інших частин)
 try:
     from config import CONFIG
 except ImportError:
@@ -42,93 +41,7 @@ CONFIG = {
         f.write(default_config_content)
     from config import CONFIG
 
-# Словник перекладів для додаткових полів
-translation_dict = {
-    "natura": "Натура",
-    "bilok": "Білок",
-    "kleikovina": "Клейковина",
-    "smitteva": "Сміттєва домішка",
-    "vologhist": "Вологість",
-    "sazhkov": "Сажкові зерна",
-    "natura_ya": "Натура",
-    "vologhist_ya": "Вологість",
-    "smitteva_ya": "Сміттєва домішка",
-    "vologhist_k": "Вологість",
-    "zernovadomishka": "Зернова домішка",
-    "poshkodjeni": "Пошкоджені зерна",
-    "smitteva_k": "Сміттєва домішка",
-    "zipsovani": "Зіпсовані зерна",
-    "olijnist_na_suhu": "Олійність на суху",
-    "vologhist_son": "Вологість",
-    "smitteva_son": "Сміттєва домішка",
-    "kislotne": "Кислотне число",
-    "olijnist_na_siru": "Олійність на сиру",
-    "vologhist_ripak": "Вологість",
-    "glukozinolati": "Глюкозінолати",
-    "smitteva_ripak": "Сміттєва домішка",
-    "bilok_na_siru": "Білок на сиру",
-    "vologhist_soya": "Вологість",
-    "smitteva_soya": "Сміттєва домішка",
-    "olijna_domishka": "Олійна домішка",
-    "ambrizia": "Амброзія"
-}
-
 API_PORT = int(os.getenv("API_PORT", "8080"))
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
-
-def format_preview(data: dict) -> str:
-    """
-    Форматує дані заявки у зрозумілий текстовий вигляд.
-    """
-    lines = []
-    lines.append("<b>Перевірте заявку:</b>")
-    lines.append(f"ФГ: {data.get('fgh_name', '')}")
-    lines.append(f"ЄДРПОУ: {data.get('edrpou', '')}")
-    lines.append(f"Область: {data.get('region', '')}")
-    lines.append(f"Район: {data.get('district', '')}")
-    lines.append(f"Місто: {data.get('city', '')}")
-    lines.append(f"Група: {data.get('group', '')}")
-    lines.append(f"Культура: {data.get('culture', '')}")
-    extra = data.get("extra_fields", {})
-    if extra:
-        lines.append("Додаткові параметри:")
-        for key, value in extra.items():
-            translated = translation_dict.get(key, key.capitalize())
-            lines.append(f"{translated}: {value}")
-    lines.append(f"Кількість: {data.get('quantity', '')} т")
-    lines.append(f"Ціна: {data.get('price', '')}")
-    lines.append(f"Валюта: {data.get('currency', '')}")
-    lines.append(f"Форма оплати: {data.get('payment_form', '')}")
-    return "\n".join(lines)
-
-async def notify_user(user_id, data: dict):
-    """
-    Надсилає повідомлення через Telegram Bot API з відформатованим текстом заявки 
-    та reply keyboard з кнопками "Підтвердити", "Редагувати", "Скасувати".
-    """
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    message_text = format_preview(data)
-    reply_markup = {
-        "keyboard": [
-            [
-                {"text": "Підтвердити"},
-                {"text": "Редагувати"},
-                {"text": "Скасувати"}
-            ]
-        ],
-        "resize_keyboard": True,
-        "one_time_keyboard": True
-    }
-    payload = {
-        "chat_id": user_id,
-        "text": message_text,
-        "parse_mode": "HTML",
-        "reply_markup": reply_markup
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload) as resp:
-            result = await resp.json()
-            return result
 
 async def handle_webapp_data(request: web.Request):
     try:
@@ -139,19 +52,9 @@ async def handle_webapp_data(request: web.Request):
         if not data or not any(data.values()):
             return web.json_response({"status": "error", "error": "empty data"})
         
-        # Отримуємо значення поля "action" (за замовчуванням "confirm")
-        action = data.get("action", "confirm")
-        logging.info(f"API отримав дані для user_id={user_id} з дією '{action}': {json.dumps(data, ensure_ascii=False)}")
-        
-        if action == "confirm":
-            # Якщо дія підтвердження – надсилаємо повідомлення з попереднім переглядом заявки
-            notify_result = await notify_user(user_id, data)
-            logging.info(f"Сповіщення боту: {notify_result}")
-            return web.json_response({"status": "preview"})
-        else:
-            # Обробка інших можливих дій (наприклад, редагування)
-            logging.info(f"Отримано дію '{action}', яка наразі не обробляється.")
-            return web.json_response({"status": "ignored", "action": action})
+        logging.info(f"API отримав дані для user_id={user_id}: {json.dumps(data, ensure_ascii=False)}")
+        # Просто повертаємо статус preview
+        return web.json_response({"status": "preview"})
     except Exception as e:
         logging.exception(f"API: Помилка: {e}")
         return web.json_response({"status": "error", "error": str(e)})
